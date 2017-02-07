@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Remote;
+using System.IO;
 
 namespace DirtyScraping
 {
@@ -16,8 +17,8 @@ namespace DirtyScraping
         static void Main(string[] args)
         {
             //TestPhantom();
-            //TestChrome();
-            TestRemote();
+            TestChrome();
+            //TestRemote();
         }
 
         static void TestChrome()
@@ -25,23 +26,37 @@ namespace DirtyScraping
             var chromeDriverService = ChromeDriverService.CreateDefaultService();
             chromeDriverService.HideCommandPromptWindow = true;
             var driver = new ChromeDriver(chromeDriverService);
+            List<string> urls = new List<string>();
+            StreamReader reader = File.OpenText("urls.txt");
+            while (!reader.EndOfStream)
+            {
+                urls.Add(reader.ReadLine());
+            }
+            var fs = new StreamWriter(File.OpenWrite("results.txt"));
+            foreach (var item in urls)
+            {
+                driver.Url = item;
+                driver.Manage().Window.Size = new System.Drawing.Size(1920, 1080);
+                driver.Navigate();
 
-            driver.Url = "https://www.kak-noviy.ru/sell/phones/apple/iphone-5/64gb-white";
-            driver.Manage().Window.Size = new System.Drawing.Size(1920, 1080);
-            driver.Navigate();
-
-            var source = driver.PageSource;
-            var label1 = driver.FindElementByXPath("//label[text()='Как новый']");
-            var label2 = driver.FindElementByXPath("//label[text()='Устройство полностью исправно']");
-            var label3 = driver.FindElementByXPath("//label[text()='Полная комплектация']");
-            var label4 = driver.FindElementByXPath("//label[text()='Блокировки отсутствуют']");
-            label1.Click();
-            label2.Click();
-            label3.Click();
-            label4.Click();
-            driver.GetScreenshot().SaveAsFile("test.png", System.Drawing.Imaging.ImageFormat.Png);
-            var price = driver.FindElementByClassName("price");
-            Console.WriteLine(price.Text);
+                var source = driver.PageSource;
+                var label1 = driver.FindElementByXPath("//label[text()='Как новый']");
+                var label2 = driver.FindElementByXPath("//label[text()='Устройство полностью исправно']");
+                var label3 = driver.FindElementByXPath("//label[text()='Полная комплектация']");
+                var label4 = driver.FindElementByXPath("//label[text()='Блокировки отсутствуют']");
+                label1.Click();
+                label2.Click();
+                label3.Click();
+                label4.Click();
+                driver.GetScreenshot().SaveAsFile("test.png", System.Drawing.Imaging.ImageFormat.Png);
+                WaitForAjax(driver);
+                var price = driver.FindElementByClassName("price");
+                fs.WriteLine(string.Format("{0}|{1}", item, price.Text));
+                fs.Flush();
+                Console.WriteLine(price.Text);
+            }
+            
+            fs.Close();
             driver.Close();
             driver.Quit();
         }
